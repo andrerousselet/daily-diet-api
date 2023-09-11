@@ -1,7 +1,7 @@
 import { app } from "./app";
 
 app.get("/hello", (_request, reply) => {
-  return reply.send("Hello world!");
+  return reply.send({ message: "Hello world!" });
 });
 
 app
