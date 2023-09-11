@@ -23,6 +23,33 @@ export async function usersRoutes(app: FastifyInstance) {
     return { user };
   });
 
+  app.put("/:id", async (request, reply) => {
+    const getUserIdParamsSchema = z.object({
+      id: z.string().uuid(),
+    });
+    const parsedUserIdParam = getUserIdParamsSchema.safeParse(request.params);
+    if (!parsedUserIdParam.success) {
+      return reply.status(400).send({ error: parsedUserIdParam.error });
+    }
+    const { id } = parsedUserIdParam.data;
+    const updateUserBodySchema = z.object({
+      name: z.string().min(3).optional(),
+      email: z.string().email().optional(),
+      password: z.string().min(6).optional(),
+    });
+    const parsedUserBody = updateUserBodySchema.safeParse(request.body);
+    if (!parsedUserBody.success) {
+      return reply.status(400).send({ error: parsedUserBody.error });
+    }
+    await knex("users")
+      .where({ id })
+      .update({
+        ...parsedUserBody.data,
+        updated_at: knex.fn.now(),
+      });
+    return reply.status(204).send();
+  });
+
   app.post("/", async (request, reply) => {
     const createUserBodySchema = z.object({
       name: z.string().min(3),
