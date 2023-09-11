@@ -42,4 +42,17 @@ export async function usersRoutes(app: FastifyInstance) {
     });
     return reply.status(201).send();
   });
+
+  app.delete("/:id", async (request, reply) => {
+    const getUserIdParamsSchema = z.object({
+      id: z.string().uuid(),
+    });
+    const parsedUserIdParam = getUserIdParamsSchema.safeParse(request.params);
+    if (!parsedUserIdParam.success) {
+      return reply.status(400).send({ error: parsedUserIdParam.error });
+    }
+    const { id } = parsedUserIdParam.data;
+    await knex("users").where({ id }).delete();
+    return reply.status(204).send();
+  });
 }
