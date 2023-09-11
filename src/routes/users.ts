@@ -15,7 +15,11 @@ export async function usersRoutes(app: FastifyInstance) {
       email: z.string().email(),
       password: z.string().min(6),
     });
-    const { name, email, password } = createUserBodySchema.parse(request.body);
+    const parsedUserBody = createUserBodySchema.safeParse(request.body);
+    if (!parsedUserBody.success) {
+      return reply.status(400).send({ error: parsedUserBody.error });
+    }
+    const { name, email, password } = parsedUserBody.data;
     await knex("users").insert({
       id: crypto.randomUUID(),
       name,
