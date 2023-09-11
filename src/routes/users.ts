@@ -9,6 +9,20 @@ export async function usersRoutes(app: FastifyInstance) {
     return { users };
   });
 
+  app.get("/:id", async (request, reply) => {
+    const getUserIdParamsSchema = z.object({
+      id: z.string().uuid(),
+    });
+    const parsedUserIdParam = getUserIdParamsSchema.safeParse(request.params);
+    if (!parsedUserIdParam.success) {
+      return reply.status(400).send({ error: parsedUserIdParam.error });
+    }
+    const { id } = parsedUserIdParam.data;
+    const user = await knex("users").where({ id }).first();
+    if (!user) return reply.status(404).send({ message: "User not found." });
+    return { user };
+  });
+
   app.post("/", async (request, reply) => {
     const createUserBodySchema = z.object({
       name: z.string().min(3),
