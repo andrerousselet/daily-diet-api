@@ -11,6 +11,28 @@ export async function mealsRoutes(app: FastifyInstance) {
     return { meals };
   });
 
+  app.get("/:id", { preHandler: [checkSessionId] }, async (request, reply) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    });
+    const parsedMealIdParam = getMealParamsSchema.safeParse(request.params);
+    if (!parsedMealIdParam.success) {
+      return reply.status(400).send({ error: parsedMealIdParam.error });
+    }
+    const { id } = parsedMealIdParam.data;
+    const { sessionId } = request.cookies;
+    const meal = await knex("meals")
+      .where({
+        session_id: sessionId,
+        id,
+      })
+      .first();
+    if (!meal) {
+      return reply.status(404).send({ message: "Meal does not exist." });
+    }
+    return { meal };
+  });
+
   app.post("/", async (request, reply) => {
     const createMealBodySchema = z.object({
       name: z.string().min(3),
