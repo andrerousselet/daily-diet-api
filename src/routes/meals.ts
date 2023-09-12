@@ -33,6 +33,41 @@ export async function mealsRoutes(app: FastifyInstance) {
     return { meal };
   });
 
+  app.put("/:id", { preHandler: [checkSessionId] }, async (request, reply) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    });
+    const parsedMealIdParam = getMealParamsSchema.safeParse(request.params);
+    if (!parsedMealIdParam.success) {
+      return reply.status(400).send({ error: parsedMealIdParam.error });
+    }
+    const { id } = parsedMealIdParam.data;
+    const { sessionId } = request.cookies;
+    const updateMealBodySchema = z.object({
+      name: z.string().min(3).optional(),
+      description: z.string().optional(),
+      on_diet: z.boolean().optional(),
+    });
+    const parsedMealBody = updateMealBodySchema.safeParse(request.body);
+    if (!parsedMealBody.success) {
+      return reply.status(400).send({ error: parsedMealBody.error });
+    }
+    const [updatedMeal] = await knex("meals")
+      .where({
+        session_id: sessionId,
+        id,
+      })
+      .update({
+        ...parsedMealBody.data,
+        updated_at: knex.fn.now(),
+      })
+      .returning("*");
+    if (!updatedMeal) {
+      return reply.status(404).send({ message: "Meal does not exist." });
+    }
+    return { updatedMeal };
+  });
+
   app.post("/", async (request, reply) => {
     const createMealBodySchema = z.object({
       name: z.string().min(3),
@@ -63,4 +98,31 @@ export async function mealsRoutes(app: FastifyInstance) {
     });
     return reply.status(201).send();
   });
+
+  app.delete(
+    "/:id",
+    { preHandler: [checkSessionId] },
+    async (request, reply) => {
+      const getMealParamsSchema = z.object({
+        id: z.string().uuid(),
+      });
+      const parsedMealIdParam = getMealParamsSchema.safeParse(request.params);
+      if (!parsedMealIdParam.success) {
+        return reply.status(400).send({ error: parsedMealIdParam.error });
+      }
+      const { id } = parsedMealIdParam.data;
+      const { sessionId } = request.cookies;
+      const deletedMealId = await knex("meals")
+        .where({
+          session_id: sessionId,
+          id,
+        })
+        .delete()
+        .returning("id");
+      if (!deletedMealId) {
+        return reply.status(404).send({ message: "Meal does not exist." });
+      }
+      return reply.status(204).send();
+    }
+  );
 }
